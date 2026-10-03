@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Room Allocation - DAA Prototype</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Exam Room Allocation System</h1>
+            <p>Graph Coloring & Greedy Algorithms</p>
+            <button id="runBtn" onclick="runAlgorithm()">Run Allocation Algorithm</button>
+        </header>
+
+        <div class="layout">
+            <div class="panel">
+                <h2>Algorithm Execution Log</h2>
+                <div id="logArea" class="log-area">
+                    <p class="placeholder">Click "Run Allocation" to see graph edge resolutions and color assignments.</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Final Timetable (Objective Result)</h2>
+                <table id="scheduleTable">
+                    <thead>
+                        <tr>
+                            <th>Time Slot</th>
+                            <th>Exam</th>
+                            <th>Students</th>
+                            <th>Assigned Room</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function runAlgorithm() {
+            const logArea = document.getElementById('logArea');
+            const tbody = document.querySelector('#scheduleTable tbody');
+            
+            logArea.innerHTML = '<p>Running Graph Coloring...</p>';
+            tbody.innerHTML = '';
+
+            const res = await fetch('/api/allocate');
+            const data = await res.json();
+
+            // Render Steps (Making decisions visible)
+            logArea.innerHTML = '';
+            data.steps.forEach(step => {
+                const div = document.createElement('div');
+                div.className = 'log-item';
+                
+                if (step.type === 'info') {
+                    div.innerHTML = `<strong>Init:</strong> ${step.msg}`;
+                } else if (step.type === 'coloring') {
+                    div.innerHTML = `<strong>Graph Node: ${step.exam}</strong><br>
+                                     Conflicts (Edges): [${step.conflicts.join(', ')}]<br>
+                                     Used Adjacent Colors: [${step.unavailable_slots.join(', ')}]<br>
+                                     <span class="highlight">Decision: Assigned Color (Slot) ${step.assigned_slot}</span>`;
+                } else if (step.type === 'room') {
+                    div.innerHTML = `<strong>Greedy Room:</strong> ${step.msg}`;
+                }
+                logArea.appendChild(div);
+            });
+
+            // Render Final Schedule
+            data.schedule.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.slot}</td>
+                    <td><strong>${row.exam}</strong></td>
+                    <td>${row.students}</td>
+                    <td>${row.room}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
